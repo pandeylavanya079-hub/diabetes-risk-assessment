@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aegis Health AI - Diabetes Risk Assessment</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="glow-bg"></div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="brand">
+                <i class="fa-solid fa-shield-halved brand-logo"></i>
+                <div class="brand-text">
+                    <h1>Aegis Health <span>AI</span></h1>
+                    <p>Advanced Diagnostics Platform</p>
+                </div>
+            </div>
+            <div class="status-indicator">
+                <span class="pulse-dot"></span>
+                <span>Model Active</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Layout -->
+        <main class="dashboard centered-layout">
+            <!-- Main Interactive Area -->
+            <section class="content-area">
+                <!-- Diabetes Assessment Card -->
+                <div class="tab-content active" id="tab-diabetes">
+                    <div class="section-title">
+                        <h2>Diabetes Risk Assessment</h2>
+                        <p>Evaluates the probability of diabetes onset based on standard clinical metrics. Powered by Random Forest classification (accuracy: 94.16%).</p>
+                    </div>
+                    <form id="diabetes-form" class="prediction-form">
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label for="pregnancies">Pregnancies <span class="range-hint">(0 - 17)</span></label>
+                                <input type="number" id="pregnancies" name="pregnancies" value="2" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="glucose">Glucose <span class="range-hint">(0 - 199)</span></label>
+                                <input type="number" id="glucose" name="glucose" value="120" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="blood_pressure">Blood Pressure <span class="range-hint">(0 - 122 mmHg)</span></label>
+                                <input type="number" id="blood_pressure" name="blood_pressure" value="70" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="skin_thickness">Skin Thickness <span class="range-hint">(0 - 99 mm)</span></label>
+                                <input type="number" id="skin_thickness" name="skin_thickness" value="20" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="insulin">Insulin <span class="range-hint">(0 - 846 mIU/L)</span></label>
+                                <input type="number" id="insulin" name="insulin" value="79" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="bmi">BMI <span class="range-hint">(0.0 - 67.1)</span></label>
+                                <input type="number" step="any" id="bmi" name="bmi" value="32.0" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="pedigree_function">Diabetes Pedigree Function <span class="range-hint">(0.08 - 2.42)</span></label>
+                                <input type="number" step="any" id="pedigree_function" name="pedigree_function" value="0.372" required>
+                            </div>
+                            <div class="input-group">
+                                <label for="age">Age <span class="range-hint">(21 - 81)</span></label>
+                                <input type="number" id="age" name="age" value="29" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="submit-btn">
+                            <i class="fa-solid fa-heart-pulse"></i> Assess Risk
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Results Output Card -->
+                <div class="results-card" id="results-card">
+                    <div class="loader" id="results-loader">
+                        <div class="spinner"></div>
+                        <p>Processing patient metrics through model pipeline...</p>
+                    </div>
+                    <div class="result-content" id="result-content">
+                        <div class="result-header">
+                            <div class="indicator-badge" id="result-badge">Negative</div>
+                            <h3>Diagnostic Results</h3>
+                        </div>
+                        <div class="result-body">
+                            <div class="metric-highlight">
+                                <span class="label">Prediction</span>
+                                <span class="value" id="result-text">Not Diabetic</span>
+                            </div>
+                            <div class="metric-highlight">
+                                <span class="label">Confidence Level</span>
+                                <span class="value" id="result-confidence">98.4%</span>
+                            </div>
+                        </div>
+                        <div class="meter-container">
+                            <div class="meter-bar" id="result-meter"></div>
+                        </div>
+                        <p class="result-disclaimer">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <strong>Disclaimer:</strong> This is a machine learning prediction generated for educational purposes. Consult a medical professional for clinical diagnosis.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Scripting for UI and Interactions -->
+    <script>
+        const resultsCard = document.getElementById('results-card');
+
+        document.getElementById('diabetes-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const payload = {
+                pregnancies: formData.get('pregnancies'),
+                glucose: formData.get('glucose'),
+                blood_pressure: formData.get('blood_pressure'),
+                skin_thickness: formData.get('skin_thickness'),
+                insulin: formData.get('insulin'),
+                bmi: formData.get('bmi'),
+                pedigree_function: formData.get('pedigree_function'),
+                age: formData.get('age')
+            };
+            await runPrediction('/predict/diabetes', payload);
+        });
+
+        async function runPrediction(endpoint, payload) {
+            resultsCard.classList.add('visible');
+            const loader = document.getElementById('results-loader');
+            const content = document.getElementById('result-content');
+            
+            loader.style.display = 'flex';
+            content.style.display = 'none';
+
+            // Scroll to results
+            resultsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Prediction Error: ' + data.error);
+                    resultsCard.classList.remove('visible');
+                    return;
+                }
+
+                // Simulate slight network delay for premium loader experience
+                setTimeout(() => {
+                    loader.style.display = 'none';
+                    content.style.display = 'block';
+
+                    const badge = document.getElementById('result-badge');
+                    const text = document.getElementById('result-text');
+                    const confidence = document.getElementById('result-confidence');
+                    const meter = document.getElementById('result-meter');
+
+                    let predictionName = data.outcome;
+                    let isHighRisk = data.prediction === 1; // Diabetic is high risk
+                    let confidencePct = (data.confidence * 100).toFixed(1) + '%';
+
+                    text.textContent = predictionName;
+                    confidence.textContent = confidencePct;
+                    meter.style.width = confidencePct;
+
+                    if (isHighRisk) {
+                        badge.textContent = 'High Risk';
+                        badge.className = 'indicator-badge high-risk';
+                        text.style.color = '#ff4a4a';
+                        meter.style.background = 'linear-gradient(90deg, #ff4a4a, #ff7b7b)';
+                    } else {
+                        badge.textContent = 'Low Risk';
+                        badge.className = 'indicator-badge low-risk';
+                        text.style.color = '#00e676';
+                        meter.style.background = 'linear-gradient(90deg, #00e676, #66ffa6)';
+                    }
+                }, 800);
+
+            } catch (err) {
+                console.error(err);
+                alert('Connection error. Is the server running?');
+                resultsCard.classList.remove('visible');
+            }
+        }
+    </script>
+</body>
+</html>
